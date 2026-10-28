@@ -2,20 +2,13 @@ import os
 import numpy as np
 import xarray as xr
 import pandas as pd
-from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
-from scipy.stats import norm
-from matplotlib.lines import Line2D
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib.path as mpath
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER
 from matplotlib.colors import Normalize
-from matplotlib.colors import TwoSlopeNorm
-from datetime import datetime, timedelta, date
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import ListedColormap, BoundaryNorm
-import sys
+from datetime import date
 from config import *
 
 
@@ -27,9 +20,6 @@ if not os.path.exists(BASE_OUT_DIR):
     os.makedirs(BASE_OUT_DIR)
 
 TAB_DIR = os.path.join(OUT_FOLDER, '02_APA_NEP_matrices')
-
-OUT_EXTRACT_DIR = os.path.join(BASE_OUT_DIR, "nep_minima_to_apa_extracts_bandmin")
-os.makedirs(OUT_EXTRACT_DIR, exist_ok=True)
 
 # "month-equivalent" in weeks (approx)
 DURATIONS = {
@@ -50,42 +40,11 @@ NEP_THRESH = 0.02        # extreme drought
 # ---------------------
 # Paths / config
 # ---------------------
-OUT_DIR = os.path.join(BASE_OUT_DIR, "drought_frequency")
-os.makedirs(OUT_DIR, exist_ok=True)
-
-SUMMARY_CSV  = os.path.join(OUT_EXTRACT_DIR,
-    "ALL_BASINS_extreme_drought_frequency_summary_HY.csv",
-)
-
-MAR_DATA_DIR = MAR_DATA_DIR
-CST_PATH     = os.path.join(MAR_DATA_DIR, "MARcst-AN35km-176x148.cdf2")
-
-
-FIG_OUT_DIR  = os.path.join(OUT_DIR, "figs_drought_frequency_HY")
-os.makedirs(FIG_OUT_DIR, exist_ok=True)
-FIG_PATH     = os.path.join(FIG_OUT_DIR, "PROB_ge1_extreme_drought_event_per_HY_maps.png")
+CST_PATH = os.path.join(MAR_DATA_DIR, "MARcst-AN35km-176x148.cdf2")
 
 DUR_ORDER = list(DURATIONS.keys())
-PROB_COL  = "prob_ge1_event_per_hydro_year"  # from your HY summary
 
-# Color scale: probability is naturally [0, 1]
-norm = Normalize(vmin=0.0, vmax=1.0)
-
-# Label offsetts read from config.py
-OLD_TAGS_VERSION = False 
-
-LABEL_OFFSETS = LABEL_OFFSETS
-LABEL_FONTSIZE = LABEL_FONTSIZE
-LINE_COLOR = LINE_COLOR
-
-
-
-
-# ---------------------
-# Read basin probabilities
-# ---------------------
-df = pd.read_csv(SUMMARY_CSV)
-df["basin_id"] = df["basin"].str.extract(r"basin_(\d+)").astype(int)
+OLD_TAGS_VERSION = False
 
 # ---------------------
 # Load MAR constants and masks
@@ -162,11 +121,8 @@ for bid in ids:
 #   - Heatmaps (basin × duration)
 # ============================================================
 
-OUT_PARENT = BASE_OUT_DIR
-OUT_STATS_DIR = os.path.join(OUT_PARENT, "climatology")
-OUT_FIG_DIR   = os.path.join(OUT_STATS_DIR, "figs")
+OUT_STATS_DIR = os.path.join(BASE_OUT_DIR, "climatology")
 os.makedirs(OUT_STATS_DIR, exist_ok=True)
-os.makedirs(OUT_FIG_DIR, exist_ok=True)
 
 DATE_FMT = "%d/%m/%Y"
 
@@ -209,7 +165,6 @@ def hydro_year(dt):
 # 1) Compute climatology stats per basin/duration
 # =========================
 all_rows = []
-monthly_rows = []  # optional long table for seasonality curves
 
 for b in range(1, 27):
     basin = f"basin_{b:02d}"
@@ -282,15 +237,6 @@ for b in range(1, 27):
                 num = int(np.sum(dry_mask & m_mask))
                 p = (num / denom) if denom > 0 else np.nan
                 monthly_prob[m] = p
-                monthly_rows.append({
-                    "basin": basin,
-                    "duration": dur_name,
-                    "month": m,
-                    "month_name": month_name(m),
-                    "p_dry": p,
-                    "n_dry_days_month": num,
-                    "n_days_month": denom,
-                })
 
             # Peak seasonality diagnostics
             # peak month by highest monthly probability
@@ -342,26 +288,17 @@ for b in range(1, 27):
         print(f"⚠ Skipping {basin} (dry climatology stats already exist)")
 
 if not FILES_PRESENT:
-    # combined tables
     df_stats = pd.DataFrame(all_rows)
-    df_month = pd.DataFrame(monthly_rows)
-
     stats_out = os.path.join(OUT_STATS_DIR, "ALL_BASINS_dry_climatology_extreme_NEPlt002.csv")
-    month_out = os.path.join(OUT_STATS_DIR, "ALL_BASINS_monthly_seasonality_extreme_NEPlt002.csv")
-
     df_stats.to_csv(stats_out, index=False)
-    df_month.to_csv(month_out, index=False)
-
     print("📌 Combined stats:", stats_out)
-    print("📌 Monthly seasonality:", month_out)
 
 ##-----------------------------------------------------------------------------
 # =========================
 # 2) Load masks + helpers for maps
 # =========================
 
-df_stats  = pd.read_csv(os.path.join(OUT_STATS_DIR, "ALL_BASINS_dry_climatology_extreme_NEPlt002.csv"))
-df_month = pd.read_csv(os.path.join(OUT_STATS_DIR, "ALL_BASINS_monthly_seasonality_extreme_NEPlt002.csv"))
+df_stats = pd.read_csv(os.path.join(OUT_STATS_DIR, "ALL_BASINS_dry_climatology_extreme_NEPlt002.csv"))
 
 def make_field_from_basin_values(basin_val_dict):
     Z = xr.full_like(RIGNOT, np.nan, dtype="float64")
@@ -374,7 +311,7 @@ def make_field_from_basin_values(basin_val_dict):
 from cmcrameri import cm
 seq_cmap = cm.davos_r
 
-def plot_4panel_map(metric_col, title, cbar_label, cmap=seq_cmap, vmin=None, vmax=None, save_file=True, dpi=None, discrete_months=False):
+def plot_4panel_map(metric_col, cbar_label, cmap=seq_cmap, vmin=None, vmax=None, save_file=False, dpi=None):
     proj = ccrs.SouthPolarStereo(central_longitude=0)
 
     fig, axs = plt.subplots(2, 2, figsize=(13, 12), subplot_kw={"projection": proj}, dpi=dpi)
@@ -518,21 +455,19 @@ def plot_4panel_map(metric_col, title, cbar_label, cmap=seq_cmap, vmin=None, vma
 ###  MAP ###
 plot_4panel_map(
     metric_col="mean_APA_dry",
-    title="Mean precipitation accumulation during extreme drought state (NEP < 0.02)",
     cbar_label="Mean APA during dry state (mm w.e.)",
-    cmap=seq_cmap, vmin=0, vmax=1000, save_file=True, dpi=400,
+    cmap=seq_cmap, vmin=0, vmax=1000, save_file=False, dpi=400,
 )
 
 #### HEATMAPS #####
 ####################
 
 df_stats = pd.read_csv(os.path.join(OUT_STATS_DIR, "ALL_BASINS_dry_climatology_extreme_NEPlt002.csv"))
-df_stats.head()
 
 # =========================
 # 4) Heatmaps: basin × duration
 # =========================
-def plot_heatmap(value_col, title, cbar_label, vmin=None, vmax=None, cmap=seq_cmap):
+def plot_heatmap(value_col, cbar_label, vmin=None, vmax=None, cmap=seq_cmap):
     
     pivot = (
         df_stats.pivot(index="basin_id", columns="duration", values=value_col)
@@ -596,17 +531,13 @@ def plot_heatmap(value_col, title, cbar_label, vmin=None, vmax=None, cmap=seq_cm
     OUT_FIG_DIR = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/manuscript_prep/MANU_v5_update/V6_figs/"
 
     out = os.path.join(OUT_FIG_DIR, f"HEATMAP_{value_col}_{DATE_PREFIX}_.png") 
-    plt.savefig(out, dpi=400, bbox_inches="tight")
+    #plt.savefig(out, dpi=400, bbox_inches="tight")
 
     plt.show()
 
 
-print(OUT_FIG_DIR)
-
-
 plot_heatmap(
     "mean_APA_dry",
-    "Mean APA during extreme drought state (NEP < 0.02)",
     "Mean APA during dry state (mm w.e.)",
     vmin = 0, vmax = 1000, cmap = seq_cmap,
 )
