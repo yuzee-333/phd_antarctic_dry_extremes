@@ -30,7 +30,7 @@ CST_PATH      = "./MARcst-AN35km-176x148.cdf2"
 
 
 
-APA_TRIM_DIR      = #"/timeseries dri, files uploaded to zenodo"
+APA_TRIM_DIR      = #"timeseries and files generated in '01_build_timeseries_APA_NEP.py', files uploaded to zenodo"
 
 OUT_D = "/output path/"
 print(OUT_D)
@@ -50,8 +50,7 @@ WEEK_SEL = 52          # e.g. 13-week accumulation (must exist in df_z.index)
 # How many example APA values (Z) to annotate on the CDF plot
 N_EXAMPLES = 3
 
-# Choose which points to illustrate:
-# "random" | "tails_and_center" | "percentiles"
+
 EXAMPLE_MODE = "tails_and_center"
 
 #                MAIN PLOT
@@ -62,7 +61,6 @@ P_LEFT   = 5     # left tail ~ 5th percentile
 P_MID    = 50    # middle ~ median
 P_RIGHT  = 95    # right tail ~ 95th percentile
 
-#OUT_FIG = os.path.join(OUT_D, f"02methods-ii_kde_cdf_nep_illustration_{REGION}_week{WEEK_SEL:02d}.png")
 OUT_FIG = os.path.join(OUT_D, f"Fig2_KDE_{DATE_PREFIX}.png")
 
 # ==========================================================
