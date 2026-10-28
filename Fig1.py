@@ -28,8 +28,8 @@ import sys
 from config import *
 
 
-MAR_FILE      = MAR_DATA_DIR+"daily-TP-MARv3.12_ERA5-1979-2023.nc"
-CST_PATH      = os.path.join(MAR_DATA_DIR, "MARcst-AN35km-176x148.cdf2")
+MAR_FILE      = #"daily-TP-MARv3.12_ERA5-1979-2023.nc" from Zenodo
+CST_PATH      = "./MARcst-AN35km-176x148.cdf2"
 
 ds = xr.open_dataset(CST_PATH, engine ='netcdf4')
 print(ds.variables)
@@ -51,10 +51,7 @@ ROCK   = ds["ROCK"]  #rock
 SOL    = ds["SOL"]   #surface type
 
 
-OUT_DIR = (
-    "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/manuscript_prep/"
-    "man.images/"
-)
+OUT_DIR = "/output path/"
 
 os.makedirs(OUT_DIR, exist_ok=True)
 
