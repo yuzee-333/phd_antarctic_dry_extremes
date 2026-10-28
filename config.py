@@ -12,7 +12,7 @@ if LINUX_PATH:
 else:
     ROOT_DIR      = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/"
     MAR_DATA_DIR  = "/Users/ucnworgu/OneDrive - University of Tasmania/DATA/auf_data/MAR.data/"
-    MASKS_PATH    = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/project.main/results/multi.temporal.drought/masks/antarctica_rignot_individual_basin_masks.nc"
+    MASKS_PATH    = "./antarctica_rignot_individual_basin_masks.nc"
 
 
 DATE_FMT_SAVE = "%d/%m/%Y"
