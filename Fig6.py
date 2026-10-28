@@ -151,16 +151,16 @@ fig, axes = plt.subplots(1, n_cols, figsize=(fig_w, fig_h), squeeze=False)
 axes = axes[0]
 
 fig.suptitle(f"Five typologies",
-             fontsize=13, fontweight="bold", y=1.03)
+             fontsize=13, fontweight="bold", y=1.03, family="cambria")
 
-panel_tags = ["A", "B", "C", "D", "E"]
+panel_tags = ["(a)", "(b)", "(c)", "(d)", "(e)"]
 
 for col_idx, (typ, t_name) in enumerate(zip(typologies_present, TYPOLOGY_NAMES)):
     ax = axes[col_idx]
 
     ax.text(0.02, 0.98, panel_tags[col_idx],
             transform=ax.transAxes,
-            fontsize=FONT_TITLE, fontweight="bold",
+            fontsize=FONT_TITLE, fontweight="bold", family="cambria",
             ha="left", va="top", color="black")
 
     sub = members_edited[members_edited["typology"] == typ]
@@ -189,17 +189,121 @@ for col_idx, (typ, t_name) in enumerate(zip(typologies_present, TYPOLOGY_NAMES))
     ax.set_xlim(windows_ref[0], windows_ref[-1])
     ax.set_ylim(0, 1.0)
     ax.tick_params(labelsize=FONT_AXIS)
+    for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+        lbl.set_fontfamily("cambria")
 
-    ax.set_xlabel("Accumulation period (weeks)", fontsize=FONT_AXIS)
+    ax.set_xlabel("Accumulation period (weeks)", fontsize=FONT_AXIS, family="cambria")
     if col_idx == 0:
-        ax.set_ylabel("Minimum NEP (rarity)", fontsize=FONT_AXIS)
+        ax.set_ylabel("Minimum NEP (rarity)", fontsize=FONT_AXIS, family="cambria")
 
     t_code = TYPOLOGY_LABELS[typ]
     ax.set_title(f"{t_code} - {t_name}  |  n = {n_typ}",
-                  fontsize=FONT_TITLE, fontweight="bold", color="black")
+                  fontsize=FONT_TITLE, fontweight="bold", color="black", family="cambria")
 
+OUT_D = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/manuscript_prep/MANU_v5_update/V6_figs/"
 plt.tight_layout()
-out_path = os.path.join(BOOT_DIR, f"{DATE_PREFIX}_panel_grey_edited_typology_k{K}.png")
+out_path = os.path.join(OUT_D, f"Fig6_typologies_{DATE_PREFIX}.png")
 fig.savefig(out_path, dpi=300, bbox_inches="tight", pad_inches=0.3)
 print(f"\nSaved: {out_path}")
+plt.show()
+
+# ============================================================
+# SECTION 5: Second version - per-typology panels showing each
+# CONSTITUENT CLUSTER's own centroid (colored, inline "C{i}" tag,
+# no legend), with the overall typology centroid kept in black.
+#
+# Constituent clusters are read off members_edited["cluster"]
+# directly (not the static TYPOLOGY_MAP), since under the edited
+# typology scheme, non-core C1 basin-years get reassigned into the
+# Drying/Wetting typologies too - this picks those up correctly.
+# ============================================================
+
+SHOW_MEMBER_CURVES = True   # flip to False to hide the grey per-curve background
+
+CLUSTER_LINE_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd", "#8c564b"]
+
+fig, axes = plt.subplots(1, n_cols, figsize=(fig_w, fig_h), squeeze=False)
+axes = axes[0]
+
+fig.suptitle("Five typologies — constituent cluster centroids",
+             fontsize=13, fontweight="bold", y=1.03, family="cambria")
+
+for col_idx, (typ, t_name) in enumerate(zip(typologies_present, TYPOLOGY_NAMES)):
+    ax = axes[col_idx]
+
+    ax.text(0.02, 0.98, panel_tags[col_idx],
+            transform=ax.transAxes,
+            fontsize=FONT_TITLE, fontweight="bold", family="cambria",
+            ha="left", va="top", color="black")
+
+    sub = members_edited[members_edited["typology"] == typ]
+    member_idx = [
+        curve_index[(int(row.basin_id), int(row.year))]
+        for row in sub.itertuples()
+        if (int(row.basin_id), int(row.year)) in curve_index
+    ]
+
+    n_typ = len(member_idx)
+
+    if n_typ > 0:
+        member_curves = curves[member_idx, :]
+        centroid = member_curves.mean(axis=0)
+
+        if SHOW_MEMBER_CURVES:
+            for i in member_idx:
+                ax.plot(windows_ref, curves[i, :],
+                         color="0.75", lw=0.55, alpha=0.7, zorder=2)
+
+        # ---- constituent-cluster centroids, colored + inline-tagged ----
+        cluster_vals = sorted(sub["cluster"].unique())
+        for ci, cl_num in enumerate(cluster_vals):
+            cl_rows = sub[sub["cluster"] == cl_num]
+            cl_idx = [
+                curve_index[(int(r.basin_id), int(r.year))]
+                for r in cl_rows.itertuples()
+                if (int(r.basin_id), int(r.year)) in curve_index
+            ]
+            if not cl_idx:
+                continue
+            cl_centroid = curves[cl_idx, :].mean(axis=0)
+            color = CLUSTER_LINE_COLORS[ci % len(CLUSTER_LINE_COLORS)]
+
+            ax.plot(windows_ref, cl_centroid, color=color, lw=1.6, zorder=5)
+            ax.annotate(
+                f"C{cl_num}", xy=(windows_ref[-1], cl_centroid[-1]),
+                xytext=(4, 0), textcoords="offset points",
+                color=color, fontsize=FONT_AXIS - 2, fontweight="bold",
+                family="cambria", va="center", ha="left", zorder=6,
+            )
+
+        # overall typology centroid - stays black, drawn on top
+        ax.plot(windows_ref, centroid, color="black", lw=2.2, zorder=7)
+
+    for nep_val, tcol, lbl in HLINE_SPECS:
+        ax.axhline(nep_val, color=tcol, lw=0.9,
+                   linestyle="--", alpha=0.85, zorder=3)
+
+    ax.set_xlim(windows_ref[0], windows_ref[-1])
+    ax.set_ylim(0, 1.0)
+    ax.tick_params(labelsize=FONT_AXIS)
+    for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+        lbl.set_fontfamily("cambria")
+
+    ax.set_xlabel("Accumulation period (weeks)", fontsize=FONT_AXIS, family="cambria")
+    if col_idx == 0:
+        ax.set_ylabel("Minimum NEP (rarity)", fontsize=FONT_AXIS, family="cambria")
+
+    t_code = TYPOLOGY_LABELS[typ]
+    ax.set_title(f"{t_code} - {t_name}  |  n = {n_typ}",
+                  fontsize=FONT_TITLE, fontweight="bold", color="black", family="cambria")
+
+plt.tight_layout()
+
+if SHOW_MEMBER_CURVES:
+    out_path_clusters = os.path.join(OUT_D, f"Fig6_typologies_members_{DATE_PREFIX}.png")
+else:
+    out_path_clusters = os.path.join(OUT_D, f"Fig6b_typologies_nomembers_{DATE_PREFIX}.png")
+
+fig.savefig(out_path_clusters, dpi=300, bbox_inches="tight", pad_inches=0.3)
+print(f"\nSaved: {out_path_clusters}")
 plt.show()
