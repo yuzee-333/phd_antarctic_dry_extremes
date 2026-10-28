@@ -15,12 +15,9 @@ from config import *
 
 DATE_PREFIX = date.today().strftime("%Y%m%d")
 
-BASE_OUT_DIR = os.path.join(OUT_FOLDER, '05_drought_metrics')
-if not os.path.exists(BASE_OUT_DIR):
-    os.makedirs(BASE_OUT_DIR)
+BASE_OUT_DIR = "./output/"
 
-TAB_DIR = os.path.join(OUT_FOLDER, '02_APA_NEP_matrices')
-
+TAB_DIR = "matrices in Zenodo"
 # "month-equivalent" in weeks (approx)
 DURATIONS = {
     "9mo": 39,
@@ -40,7 +37,7 @@ NEP_THRESH = 0.02        # extreme drought
 # ---------------------
 # Paths / config
 # ---------------------
-CST_PATH = os.path.join(MAR_DATA_DIR, "MARcst-AN35km-176x148.cdf2")
+CST_PATH = "./MARcst-AN35km-176x148.cdf2"
 
 DUR_ORDER = list(DURATIONS.keys())
 
@@ -121,7 +118,7 @@ for bid in ids:
 #   - Heatmaps (basin × duration)
 # ============================================================
 
-OUT_STATS_DIR = os.path.join(BASE_OUT_DIR, "climatology")
+OUT_STATS_DIR = "./output/spatial_dry_extreme/"
 os.makedirs(OUT_STATS_DIR, exist_ok=True)
 
 DATE_FMT = "%d/%m/%Y"
