@@ -23,7 +23,7 @@ K = 10
 NPZ_PATH       = os.path.join(OUT_MAIN, "all_basins_rarity_curves.npz")
 MEMBERS_PATH   = os.path.join(OUT_MAIN, f"members_global_k{K}.csv")
 CENTROIDS_PATH = os.path.join(OUT_MAIN, f"centroids_global_k{K}.csv")
-
+MANUSCRIPT_IMAGES_FOLDER = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/manuscript_prep/MANU_v5_update/V6_figs/"
 os.makedirs(MANUSCRIPT_IMAGES_FOLDER, exist_ok=True)
 FIG_OUT_PATH = os.path.join(MANUSCRIPT_IMAGES_FOLDER, f"Fig5_global_kmeans_k{K}.png")
 
@@ -81,7 +81,7 @@ fig, axes = plt.subplots(
 axes = np.atleast_2d(axes)
 
 fig.suptitle(f"Global k-means — all 26 basins  |  k={K} cluster",
-             fontsize=13, fontweight="bold", y=1.0)
+             fontsize=13, fontweight="bold", y=1.0, family="cambria")
 
 for cl in range(K):
     row_i, col_i = divmod(cl, MAX_COLS)
@@ -105,13 +105,15 @@ for cl in range(K):
 
     ax.set_xlim(windows_ref[0], windows_ref[-1])
     ax.set_ylim(0, 1.0)
-    ax.tick_params(labelsize=FONT_AXIS)
-    ax.set_xlabel("Accumulation period (weeks)", fontsize=FONT_AXIS)
+    ax.tick_params(labelsize=FONT_AXIS, labelfontfamily="cambria")
+    # for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+    #     lbl.set_fontfamily("cambria")
+    ax.set_xlabel("Accumulation period (weeks)", fontsize=FONT_AXIS, family="cambria")
     if col_i == 0:
-        ax.set_ylabel("Minimum NEP (rarity)", fontsize=FONT_AXIS)
+        ax.set_ylabel("Minimum NEP (rarity)", fontsize=FONT_AXIS, family="cambria")
 
     ax.set_title(f"C{cl+1}  |  n = {n_cl}",
-                 fontsize=FONT_TITLE, fontweight="bold")
+                 fontsize=FONT_TITLE, fontweight="bold", family="cambria")
 
 plt.tight_layout()
 plt.savefig(FIG_OUT_PATH, dpi=300, bbox_inches="tight", pad_inches=0.3)
@@ -155,9 +157,11 @@ for ax, eof, ve, label in zip(axes,
                                ["EOF1", "EOF2"]):
     ax.plot(windows_ref, eof, color="black", lw=1.8)
     ax.axhline(0, color="grey", lw=0.8, ls="--")
-    ax.set_ylabel("Loading")
-    ax.set_title(f"{label}  ({ve:.1f}% variance explained)")
-axes[-1].set_xlabel("Accumulation window (weeks)", fontsize=12)
+    ax.set_ylabel("Loading", family="cambria")
+    ax.set_title(f"{label}  ({ve:.1f}% variance explained)", family="cambria")
+    ax.set_xlabel("Accumulation window (weeks)", fontsize=12, family="cambria")
+    for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+        lbl.set_fontfamily("cambria")
 
 plt.tight_layout()
 FIG5B_OUT_PATH = os.path.join(MANUSCRIPT_IMAGES_FOLDER, "Fig5b_eof1_eof2_patterns.png")
@@ -206,13 +210,15 @@ for cl in range(1, K + 1):
     )
     ax.annotate(
         f"C{cl}", xy=(c1, c2), xytext=(4, 4), textcoords="offset points",
-        fontsize=15, fontweight="bold", color="black", zorder=6,
+        fontsize=15, fontweight="bold", family="cambria", color="black", zorder=6,
     )
 
 ax.axhline(0, color="grey", lw=0.7, ls="--", alpha=0.6)
 ax.axvline(0, color="grey", lw=0.7, ls="--", alpha=0.6)
-ax.set_xlabel(f"PC1 score — overall amplitude  ({var_explained[0]:.1f}% variance)", fontsize=15)
-ax.set_ylabel(f"PC2 score — temporal shape  ({var_explained[1]:.1f}% variance)", fontsize=15)
+ax.set_xlabel(f"PC1 score — overall amplitude  ({var_explained[0]:.1f}% variance)", fontsize=15, family="cambria")
+ax.set_ylabel(f"PC2 score — temporal shape  ({var_explained[1]:.1f}% variance)", fontsize=15, family="cambria")
+for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+    lbl.set_fontfamily("cambria")
 
 handles = [
     mpatches.Patch(color=CLUSTER_COLORS[int(cl[1:])],
@@ -220,11 +226,122 @@ handles = [
     for cl in CLUSTER_ORDER
     if np.sum(labels == int(cl[1:]) - 1) > 0
 ]
-ax.legend(handles=handles, fontsize=10, frameon=True, framealpha=0.85,
+leg = ax.legend(handles=handles, fontsize=10, frameon=True, framealpha=0.85,
           loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=5, borderaxespad=0.)
+for text in leg.get_texts():
+    text.set_fontfamily("cambria")
+
+for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+    lbl.set_fontfamily("cambria")
 
 plt.tight_layout()
 FIG5C_OUT_PATH = os.path.join(MANUSCRIPT_IMAGES_FOLDER, f"Fig5c_kmeans_eof_projection_k{K}.png")
 plt.savefig(FIG5C_OUT_PATH, dpi=300, bbox_inches="tight")
 print(f"Saved: {FIG5C_OUT_PATH}")
+plt.show()
+
+# ============================================================
+# SECTION 6: Combined manuscript figure - panels (a)-(l)
+# Reuses the arrays already computed in Sections 2-5 above
+# (curves, labels, centroids, eof1/eof2, scores_eof1/2, etc.)
+# instead of recomputing or reloading anything.
+# ============================================================
+
+import string
+import matplotlib.gridspec as gridspec
+
+PANEL_LETTERS = list(string.ascii_lowercase[:12])   # a..l
+TAG_KW = dict(ha="left", va="top", fontsize=16, fontweight="bold", family="cambria")
+
+
+def _cambria_ticks(ax):
+    for lbl in ax.get_xticklabels() + ax.get_yticklabels():
+        lbl.set_fontfamily("cambria")
+
+fig = plt.figure(figsize=(20, 16))
+outer = gridspec.GridSpec(3, 5, figure=fig, hspace=0.45, wspace=0.35,
+                            height_ratios=[1, 1, 1.3])
+
+# ---- (a)-(j): the 10 cluster panels, same layout as Section 3 ----
+for cl in range(K):
+    row_i, col_i = divmod(cl, MAX_COLS)
+    ax = fig.add_subplot(outer[row_i, col_i])
+
+    idx = np.where(labels == cl)[0]
+    for i in idx:
+        ax.plot(windows_ref, curves[i, :], color="0.75", lw=0.55, alpha=0.7, zorder=2)
+    ax.plot(windows_ref, centroids[cl, :], color="black", lw=2.2, zorder=4)
+
+    for nep_val, tcol, lbl in HLINE_SPECS:
+        ax.axhline(nep_val, color=tcol, lw=0.9, linestyle="--", alpha=0.85, zorder=3)
+
+    ax.set_xlim(windows_ref[0], windows_ref[-1])
+    ax.set_ylim(0, 1.0)
+    ax.tick_params(labelsize=FONT_AXIS)
+    _cambria_ticks(ax)
+    ax.set_xlabel("Accumulation period (weeks)", fontsize=FONT_AXIS, family="cambria")
+    if col_i == 0:
+        ax.set_ylabel("Minimum NEP (rarity)", fontsize=FONT_AXIS, family="cambria")
+    ax.set_title(f"C{cl+1}  |  n = {len(idx)}", fontsize=FONT_TITLE, fontweight="bold", family="cambria")
+
+    ax.text(0.03, 0.95, f"({PANEL_LETTERS[cl]})", transform=ax.transAxes, **TAG_KW)
+
+# ---- (k): EOF1 + EOF2 stacked, bottom-left (2 of 5 columns) ----
+eof_gs = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[2, 0:2], hspace=0.35)
+eof_axes = [fig.add_subplot(eof_gs[0, 0]), fig.add_subplot(eof_gs[1, 0])]
+
+for ax, eof, ve, label in zip(eof_axes, [eof1, eof2],
+                                [var_explained[0], var_explained[1]], ["EOF1", "EOF2"]):
+    ax.plot(windows_ref, eof, color="black", lw=1.8)
+    ax.axhline(0, color="grey", lw=0.8, ls="--")
+    ax.set_ylabel("Loading", fontsize=FONT_AXIS, family="cambria")
+    ax.set_title(f"{label}  ({ve:.1f}% variance explained)", fontsize=FONT_AXIS, family="cambria")
+    _cambria_ticks(ax)
+eof_axes[-1].set_xlabel("Accumulation window (weeks)", fontsize=FONT_AXIS, family="cambria")
+
+eof_axes[0].text(0.03, 0.95, f"({PANEL_LETTERS[10]})", transform=eof_axes[0].transAxes, **TAG_KW)
+
+# ---- (l): k-means clusters projected onto EOF1 x EOF2, bottom-right (3 of 5 columns) ----
+ax_scatter = fig.add_subplot(outer[2, 2:5])
+
+for cl in range(1, K + 1):
+    idx = np.where(labels == cl - 1)[0]
+    if len(idx) == 0:
+        continue
+    ax_scatter.scatter(scores_eof1[idx], scores_eof2[idx],
+                        color=CLUSTER_COLORS[cl], s=10, alpha=0.45, edgecolors="none")
+    c1, c2 = scores_eof1[idx].mean(), scores_eof2[idx].mean()
+    ax_scatter.scatter(c1, c2, color=CLUSTER_COLORS[cl], s=160,
+                        edgecolors="black", linewidths=1.2, zorder=5)
+    ax_scatter.annotate(f"C{cl}", xy=(c1, c2), xytext=(4, 4), textcoords="offset points",
+                         fontsize=13, fontweight="bold", family="cambria", color="black", zorder=6)
+
+ax_scatter.axhline(0, color="grey", lw=0.7, ls="--", alpha=0.6)
+ax_scatter.axvline(0, color="grey", lw=0.7, ls="--", alpha=0.6)
+ax_scatter.set_xlabel(f"PC1 score — overall amplitude  ({var_explained[0]:.1f}% variance)", fontsize=13, family="cambria")
+ax_scatter.set_ylabel(f"PC2 score — temporal shape  ({var_explained[1]:.1f}% variance)", fontsize=13, family="cambria")
+_cambria_ticks(ax_scatter)
+
+# ── 5-typology legend (not per-cluster), vertical, right of panel (l) ──
+TYPOLOGY_LEGEND_COLORS = {
+    "Dry":     "#67001f",
+    "Drying":  "#d6604d",
+    "Median":  "#e8d9a0",
+    "Wetting": "#92c5de",
+    "Wet":     "#053061",
+}
+typ_handles = [mpatches.Patch(color=c, label=l) for l, c in TYPOLOGY_LEGEND_COLORS.items()]
+leg_l = ax_scatter.legend(handles=typ_handles, title="Typology",
+                            loc="center left", bbox_to_anchor=(1.02, 0.5),
+                            ncol=1, fontsize=11, title_fontsize=12,
+                            frameon=True, framealpha=0.9)
+for text in leg_l.get_texts():
+    text.set_fontfamily("cambria")
+leg_l.get_title().set_fontfamily("cambria")
+
+ax_scatter.text(0.02, 0.98, f"({PANEL_LETTERS[11]})", transform=ax_scatter.transAxes, **TAG_KW)
+
+FIG5_COMBINED_PATH = os.path.join(MANUSCRIPT_IMAGES_FOLDER, f"Fig5_combined_k{K}.png")
+plt.savefig(FIG5_COMBINED_PATH, dpi=300, bbox_inches="tight")
+print(f"Saved: {FIG5_COMBINED_PATH}")
 plt.show()
