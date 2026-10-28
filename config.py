@@ -1,18 +1,10 @@
 import numpy as np
 import matplotlib.cm as cm
 
-LINUX_PATH = False
 
-if LINUX_PATH:
-    ROOT_DIR     = "/home/nworguu/mywork/AUFRANDE.work/"
-    MAR_DATA_DIR = "/home/nworguu/DATA/auf_data/MAR.data/"
-    MASKS_PATH = "/home/nworguu/mywork/AUFRANDE.work/PhD.things/project.main/results/multi.temporal.drought/masks/antarctica_rignot_individual_basin_masks.nc"
-
-    
-else:
-    ROOT_DIR      = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/"
-    MAR_DATA_DIR  = "/Users/ucnworgu/OneDrive - University of Tasmania/DATA/auf_data/MAR.data/"
-    MASKS_PATH    = "./antarctica_rignot_individual_basin_masks.nc"
+    ROOT_DIR     = "root to main folder"
+    MAR_DATA_DIR = "MAR.data from zenodo"
+    MASKS_PATH    = "./antarctica_rignot_basin_masks.nc"
 
 
 DATE_FMT_SAVE = "%d/%m/%Y"
