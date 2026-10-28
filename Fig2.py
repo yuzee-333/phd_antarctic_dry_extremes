@@ -12,28 +12,27 @@ import pandas as pd
 from matplotlib import colormaps
 from matplotlib.lines import Line2D
 import matplotlib.dates as mdates
+from datetime import datetime, timedelta, date
 
 from sklearn.neighbors import KernelDensity
 
 import sys
 from config import *
 
+DATE_PREFIX = date.today().strftime("%Y%m%d")
 # ---------------------
 # 0) Paths
 # ---------------------
 
-OUT_DIR = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/project.main/results/multi.temporal.drought/masks/"
-os.makedirs(OUT_DIR, exist_ok=True)
 
 #MAR_DATA_DIR = "/home/nworguu/DATA/auf_data/MAR.data/"
 CST_PATH      = os.path.join(MAR_DATA_DIR, "MARcst-AN35km-176x148.cdf2")
 
 
-OUT_D             = os.path.join(ROOT_DIR, "PhD.things/manuscript_prep/man.images/")
-print("OUT_D: ", OUT_D) 
+
 APA_TRIM_DIR      = os.path.join(ROOT_DIR, "PhD.things/project.main/results/multi.temporal.drought/rignot.individual.mask.results/3years/yearly_tables_12regions/")
 
-
+OUT_D = "/output path/"
 print(OUT_D)
 
 
@@ -55,10 +54,6 @@ N_EXAMPLES = 3
 # "random" | "tails_and_center" | "percentiles"
 EXAMPLE_MODE = "tails_and_center"
 
-# Output figure
-OUT_FIG = os.path.join(OUT_D, f"Fig2.png")
-print(OUT_FIG)
-
 #                MAIN PLOT
 #==========================================================
 # Pick 3 example dates automatically from left-tail / middle / right-tail
@@ -68,7 +63,7 @@ P_MID    = 50    # middle ~ median
 P_RIGHT  = 95    # right tail ~ 95th percentile
 
 #OUT_FIG = os.path.join(OUT_D, f"02methods-ii_kde_cdf_nep_illustration_{REGION}_week{WEEK_SEL:02d}.png")
-OUT_FIG = os.path.join(OUT_D, f"Fig2_KDE.png")
+OUT_FIG = os.path.join(OUT_D, f"Fig2_KDE_{DATE_PREFIX}.png")
 
 # ==========================================================
 # LOAD Z TABLE (rows=weeks, cols=dates)
@@ -164,23 +159,23 @@ fig, (ax_pdf, ax_cdf) = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=T
 # ---------- Panel A: histogram + KDE (PDF) ----------
 bins = 40
 ax_pdf.hist(z_vals, bins=bins, density=True, alpha=0.35, edgecolor="none")
-ax_pdf.set_xlabel("Deseasonalized APA", fontsize=12)
-ax_pdf.set_ylabel("Density", fontsize=12)
+ax_pdf.set_xlabel("Deseasonalized APA", fontsize=12, family="cambria")
+ax_pdf.set_ylabel("Density", fontsize=12, family="cambria")
 
 if use_kde:
     ax_pdf.plot(xs, pdf, lw=2.0)
-    ax_pdf.set_title(f"{REGION} | {WEEK_SEL}-week window\nAPA distribution and KDE", fontsize=12)
+    ax_pdf.set_title(f"{REGION} | {WEEK_SEL}-week window\nAPA distribution and KDE", fontsize=12, family="cambria")
     ax_pdf.text(
         0.02, 0.95, f"KDE bandwidth = {KDE_BW}\nN = {n}",
         transform=ax_pdf.transAxes, ha="left", va="top",
         fontsize=12, color="white", bbox=dict(facecolor="white", alpha=0.1, edgecolor="none")
     )
 else:
-    ax_pdf.set_title(f"{REGION} | {WEEK_SEL}-week window\nAPA distribution and ECDF fallback", fontsize=12)
+    ax_pdf.set_title(f"{REGION} | {WEEK_SEL}-week window\nAPA distribution and ECDF fallback", fontsize=12, family="cambria")
     ax_pdf.text(
         0.02, 0.95, f"ECDF fallback (N < {MIN_KDE_SAMPLES})\nN = {n}",
         transform=ax_pdf.transAxes, ha="left", va="top",
-        fontsize=12, bbox=dict(facecolor="white", alpha=0.8, edgecolor="none")
+        fontsize=12, family="cambria", bbox=dict(facecolor="white", alpha=0.8, edgecolor="none")
     )
 
 # Mark the 3 selected example Z values on the histogram/PDF
@@ -191,14 +186,14 @@ ax_pdf.text(
     0.98, 0.92,
     "\n".join([f"{lab}: APA={z0:.2f}" for lab, z0 in zip(zone_labels, example_z)]),
     transform=ax_pdf.transAxes, ha="right", va="top",
-    fontsize=12, bbox=dict(facecolor="white", alpha=0.8, edgecolor="none")
+    fontsize=12, family="cambria", bbox=dict(facecolor="white", alpha=0.8, edgecolor="none")
 )
 
 # ---------- Panel B: CDF + NEP mapping ----------
 ax_cdf.plot(xs, cdf, lw=2.2)
-ax_cdf.set_xlabel("Deseasonalized APA", fontsize=12)
-ax_cdf.set_ylabel("NEP (0–1)", fontsize=12)
-ax_cdf.set_title("CDF and NEP mapping: NEP = CDF(APA)", fontsize=12)
+ax_cdf.set_xlabel("Deseasonalized APA", fontsize=12, family="cambria")
+ax_cdf.set_ylabel("NEP (0–1)", fontsize=12, family="cambria")
+ax_cdf.set_title("CDF and NEP mapping: NEP = CDF(APA)", fontsize=12, family="cambria")
 
 # Plot the 3 example points and show how NEP is read off
 for z0, nep0, d0, lab in zip(example_z, example_nep, example_dates, zone_labels):
@@ -211,7 +206,7 @@ for z0, nep0, d0, lab in zip(example_z, example_nep, example_dates, zone_labels)
         xy=(z0, nep0),
         xytext=(10, -10),
         textcoords="offset points",
-        fontsize=12,
+        fontsize=12, family="cambria",
         bbox=dict(facecolor="white", alpha=0.85, edgecolor="none")
     )
 
@@ -222,14 +217,12 @@ GUIDE_LABELS = ["mild", "moderate", "severe", "extreme"]
 
 
 # ---------- Panel tags A and B ----------
-ax_pdf.text(0.02, 0.98, "A", transform=ax_pdf.transAxes,
-            ha="left", va="top", fontsize=14, fontweight="bold")
-ax_cdf.text(0.02, 0.98, "B", transform=ax_cdf.transAxes,
-            ha="left", va="top", fontsize=14, fontweight="bold")
+ax_pdf.text(0.02, 0.98, "(a)", transform=ax_pdf.transAxes,
+            ha="left", va="top", fontsize=14, fontweight="bold", family="cambria")
+ax_cdf.text(0.02, 0.98, "(b)", transform=ax_cdf.transAxes,
+            ha="left", va="top", fontsize=14, fontweight="bold", family="cambria")
 
-#fig.suptitle(f"Illustration of KDE → CDF → NEP ({REGION}, {WEEK_SEL}-week window)", fontsize=14)
-
-fig.savefig(OUT_FIG, dpi=300, bbox_inches="tight")
+#fig.savefig(OUT_FIG, dpi=300, bbox_inches="tight")
 print(f"✅ Saved illustration: {OUT_FIG}")
 plt.show()
 
