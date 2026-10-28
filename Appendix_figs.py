@@ -14,6 +14,11 @@ from datetime import date
 import sys
 from config import *
 
+"""
+C6
+BARPLOTS manuV6
+"""
+
 # ============================================================
 # SECTION 1: Paths and plot constants
 # (mirrors the "2_barplot_by_basin" section of
