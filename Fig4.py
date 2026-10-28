@@ -6,18 +6,21 @@ from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from matplotlib.lines import Line2D
-
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib.path as mpath
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER
 from matplotlib.colors import Normalize
 from matplotlib.colors import TwoSlopeNorm
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, BoundaryNorm
 import sys
 from config import *
+
+
+
+DATE_PREFIX = date.today().strftime("%Y%m%d")
 
 BASE_OUT_DIR = os.path.join(OUT_FOLDER, '05_drought_metrics')
 if not os.path.exists(BASE_OUT_DIR):
@@ -35,43 +38,14 @@ DURATIONS = {
     "24mo": 104,
     "36mo": 156,
 }
-
-# ---- band half-width in weeks (tune this) ----
-# Example: +/-2 weeks means:
-# 3mo band = weeks in [11..15], clipped to available week rows
-
-
-# ============================================================
-# Dry-period climatology (duration-aware) for Antarctica basins
-# Extreme drought definition: NEP < 0.02 (McKee et al. SPI-style)
-# Durations: 3/6/9/12 months ~ 13/26/39/52 weeks with ±2-week band
-#
-# For each basin & duration:
-#   - drought mask from NEP band: dry(t)=1 if ANY week in band has NEP(t)<0.02
-#   - APA_scale(t): mean APA across band weeks (band-mean time series)
-#   - compute dry-state stats: mean/variance/quantiles
-#   - compute seasonality: monthly dry-day probability, peak month, peak probability
-#
-# Outputs:
-#   - Per-basin duration stats CSV
-#   - Combined summary CSV
-#   - Maps (4-panel with shared colorbar)
-#   - Heatmaps (basin × duration)
-# ============================================================
-
-OUT_PARENT = BASE_OUT_DIR
-OUT_STATS_DIR = os.path.join(OUT_PARENT, "climatology")
-OUT_FIG_DIR   = os.path.join(OUT_STATS_DIR, "figs")
-os.makedirs(OUT_STATS_DIR, exist_ok=True)
-os.makedirs(OUT_FIG_DIR, exist_ok=True)
-
-DATE_FMT = "%d/%m/%Y"
-
-NEP_THRESH = 0.02
 BAND_HALF_WIDTH_WEEKS = 2
+NEP_THRESH = 0.02        # extreme drought
 
 
-
+# ============================================================
+# Four subplots (3, 6, 9, 12 months), shared vertical colorbar (right)
+# Uses RIGNOT basin masks (id 1..26) from MAR constants file.
+# ============================================================
 
 # ---------------------
 # Paths / config
@@ -92,61 +66,19 @@ os.makedirs(FIG_OUT_DIR, exist_ok=True)
 FIG_PATH     = os.path.join(FIG_OUT_DIR, "PROB_ge1_extreme_drought_event_per_HY_maps.png")
 
 DUR_ORDER = list(DURATIONS.keys())
-#["3mo", "6mo", "9mo", "12mo"]
 PROB_COL  = "prob_ge1_event_per_hydro_year"  # from your HY summary
 
 # Color scale: probability is naturally [0, 1]
 norm = Normalize(vmin=0.0, vmax=1.0)
 
-# Label offsets (keep same offsets you used before)
+# Label offsetts read from config.py
 OLD_TAGS_VERSION = False 
-if OLD_TAGS_VERSION:
-    LABEL_OFFSETS = {
-        5:  {"dlat": 0.5, "dlon": -1.0},
-        16: {"dlat": 2.0, "dlon": -1.0},
-        17: {"dlat": -0.5, "dlon": 0.5},
-        23: {"dlat": 4.0, "dlon":  1.0},
-        21: {"dlat": 3.0, "dlon": 1.0},
-        25: {"dlat": 1.0, "dlon": 0.0},
-        26: {"dlat": -0.5, "dlon": 1.0},
-    }
 
-    LABEL_FONTSIZE = 7
-
-else:
-    LABEL_OFFSETS = {
-        1:  {"dlat": 8.0, "dlon": -1.0},                #✅
-        5:  {"dlat": 0.5, "dlon": -1.0},                #✅
-        15: {"dlat": 0.0, "dlon": 15.0},                #✅
-        16: {"dlat": 4.0, "dlon": -2.0},                #✅
-        17: {"dlat": 8.0, "dlon": -15.0},               #✅
-        21: {"dlat": 8.5, "dlon":  1.0},                #✅
-        22: {"dlat": 8.5, "dlon":  0.0},                #✅
-        23: {"dlat": 8.5, "dlon":  1.0},                #✅
-        24: {"dlat": 10.0, "dlon":  0.0},               #✅
-        25: {"dlat": 8.5, "dlon":  -7.0},               #✅
-        26: {"dlat": -0.5, "dlon": 15.0},               #✅
-    }
-
-    LABEL_FONTSIZE = 9
+LABEL_OFFSETS = LABEL_OFFSETS
+LABEL_FONTSIZE = LABEL_FONTSIZE
+LINE_COLOR = LINE_COLOR
 
 
-
-LINE_COLOR = "k"
-
-ANNOTATION_LINES = {
-    1:  {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": -0.5},
-    15: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": -1.5},
-    16: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": 0.0},
-    17: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": -2.5},
-    21: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": 2.5},
-    22: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": 0.0},
-    23: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": 3.5},
-    24: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": 0.5},
-    25: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": 0.0},
-    26: {"color": LINE_COLOR, "lw": 0.7, "ls": "-", "arrowstyle": "<-", "tip_offset": -0.5},
-}
-ARROW_TIP_PULLBACK = 0.3   # fraction of the offset vector length
 
 
 # ---------------------
@@ -155,24 +87,13 @@ ARROW_TIP_PULLBACK = 0.3   # fraction of the offset vector length
 df = pd.read_csv(SUMMARY_CSV)
 df["basin_id"] = df["basin"].str.extract(r"basin_(\d+)").astype(int)
 
-# duration -> {basin_id: prob}
-dur_to_prob = {}
-for dur in DUR_ORDER:
-    sub = df[df["duration"] == dur].copy()
-    # should be one row per basin/duration, but groupby is safe
-    prob_map = sub.groupby("basin_id")[PROB_COL].mean().to_dict()
-    dur_to_prob[dur] = prob_map
-
 # ---------------------
 # Load MAR constants and masks
 # ---------------------
 ds = xr.open_dataset(CST_PATH)
 
-# harmonize dims if needed
-if "y" in ds.dims and "Y" not in ds.dims:
-    ds = ds.rename({"y": "Y"})
-if "x" in ds.dims and "X" not in ds.dims:
-    ds = ds.rename({"x": "X"})
+if "y" in ds.dims and "Y" not in ds.dims: ds = ds.rename({"y": "Y"})
+if "x" in ds.dims and "X" not in ds.dims: ds = ds.rename({"x": "X"})
 
 LAT    = ds["LAT"]
 LON    = ds["LON"]
@@ -185,6 +106,8 @@ valid = (AIS > 0.5) & np.isfinite(RIGNOT)
 
 ids = np.unique(RIGNOT.where(valid).values)
 ids = ids[np.isfinite(ids)].astype(int)
+
+
 
 # ---------------------
 # Compute area-weighted basin centroids (for labels)
@@ -220,6 +143,34 @@ for bid in ids:
     centroids.append((int(bid), lat_c, lon_c))
 
 
+
+# ============================================================
+# Dry-period climatology (duration-aware) for Antarctica basins
+# Extreme drought definition: NEP < 0.02 (McKee et al. SPI-style)
+# Durations: 3/6/9/12 months ~ 13/26/39/52 weeks with ±2-week band
+#
+# For each basin & duration:
+#   - drought mask from NEP band: dry(t)=1 if ANY week in band has NEP(t)<0.02
+#   - APA_scale(t): mean APA across band weeks (band-mean time series)
+#   - compute dry-state stats: mean/variance/quantiles
+#   - compute seasonality: monthly dry-day probability, peak month, peak probability
+#
+# Outputs:
+#   - Per-basin duration stats CSV
+#   - Combined summary CSV
+#   - Maps (4-panel with shared colorbar)
+#   - Heatmaps (basin × duration)
+# ============================================================
+
+OUT_PARENT = BASE_OUT_DIR
+OUT_STATS_DIR = os.path.join(OUT_PARENT, "climatology")
+OUT_FIG_DIR   = os.path.join(OUT_STATS_DIR, "figs")
+os.makedirs(OUT_STATS_DIR, exist_ok=True)
+os.makedirs(OUT_FIG_DIR, exist_ok=True)
+
+DATE_FMT = "%d/%m/%Y"
+
+
 # =========================
 # Helpers
 # =========================
@@ -250,7 +201,6 @@ def season_of_month(m):
     return "SON"
 
 def hydro_year(dt):
-    # HY YYYY = Apr YYYY -> Mar YYYY+1
     return dt.year if dt.month >= 4 else dt.year - 1
 
 
@@ -405,21 +355,10 @@ if not FILES_PRESENT:
     print("📌 Combined stats:", stats_out)
     print("📌 Monthly seasonality:", month_out)
 
-
+##-----------------------------------------------------------------------------
 # =========================
 # 2) Load masks + helpers for maps
 # =========================
-ds = xr.open_dataset(CST_PATH)
-if "y" in ds.dims and "Y" not in ds.dims: ds = ds.rename({"y": "Y"})
-if "x" in ds.dims and "X" not in ds.dims: ds = ds.rename({"x": "X"})
-
-LAT = ds["LAT"]
-LON = ds["LON"]
-AIS = ds["AIS"]
-RIGNOT = ds["RIGNOT"]
-valid = (AIS > 0.5) & np.isfinite(RIGNOT)
-
-LON_wrapped = ((LON + 180) % 360) - 180
 
 df_stats  = pd.read_csv(os.path.join(OUT_STATS_DIR, "ALL_BASINS_dry_climatology_extreme_NEPlt002.csv"))
 df_month = pd.read_csv(os.path.join(OUT_STATS_DIR, "ALL_BASINS_monthly_seasonality_extreme_NEPlt002.csv"))
@@ -432,7 +371,10 @@ def make_field_from_basin_values(basin_val_dict):
         Z = xr.where((RIGNOT == int(bid)) & valid, float(val), Z)
     return Z
 
-def plot_4panel_map(metric_col, title, cbar_label, cmap="viridis", vmin=None, vmax=None, save_file=True, dpi=None, discrete_months=False):
+from cmcrameri import cm
+seq_cmap = cm.davos_r
+
+def plot_4panel_map(metric_col, title, cbar_label, cmap=seq_cmap, vmin=None, vmax=None, save_file=True, dpi=None, discrete_months=False):
     proj = ccrs.SouthPolarStereo(central_longitude=0)
 
     fig, axs = plt.subplots(2, 2, figsize=(13, 12), subplot_kw={"projection": proj}, dpi=dpi)
@@ -469,7 +411,7 @@ def plot_4panel_map(metric_col, title, cbar_label, cmap="viridis", vmin=None, vm
         gl.xlabels_top = False
         gl.xlabels_bottom = True
         gl.xformatter = LONGITUDE_FORMATTER
-        gl.xlabel_style = {"size": 8}
+        gl.xlabel_style = {"size": 8, "family": "cambria"}
 
         sub = df_stats[df_stats["duration"] == dur].copy()
         basin_vals = dict(zip(sub["basin_id"].astype(int), sub[metric_col].astype(float)))
@@ -504,7 +446,7 @@ def plot_4panel_map(metric_col, title, cbar_label, cmap="viridis", vmin=None, vm
             ax.text(
                 text_lon, text_lat, f"{bid}",
                 transform=ccrs.PlateCarree(),
-                fontsize=LABEL_FONTSIZE,
+                fontsize=LABEL_FONTSIZE, family="cambria",
                 ha="center", va="center", color="k",
                 bbox=dict(facecolor="white", alpha=0.00, boxstyle="round,pad=0.15", linewidth=0.0),
                 zorder=7,
@@ -525,7 +467,9 @@ def plot_4panel_map(metric_col, title, cbar_label, cmap="viridis", vmin=None, vm
                 else:
                     unit_lat = unit_lon = 0.0
 
-                
+                # tip_offset > 0 → tip moves AWAY from centroid (shorter line)
+                # tip_offset < 0 → tip moves PAST centroid (longer line)
+                # tip_offset in degrees, same units as lat/lon
                 tip_offset = style.get("tip_offset", 0.0)
                 tip_lat = lat_c - unit_lat * tip_offset
                 tip_lon = lon_c - unit_lon * tip_offset
@@ -547,20 +491,23 @@ def plot_4panel_map(metric_col, title, cbar_label, cmap="viridis", vmin=None, vm
                     zorder=7,
                 )
 
-        ax.set_title(dur, fontsize=12)
+        ax.set_title(dur, fontsize=12, family="cambria")
 
     # shared colorbar (right, vertical)
     cax = fig.add_axes([0.95, 0.18, 0.005, 0.64])
     cb = plt.colorbar(mappable, cax=cax, orientation="vertical", extend="both")
-    cb.set_label(cbar_label, fontsize=11)
+    cb.set_label(cbar_label, fontsize=11, family="cambria")
     cb.ax.tick_params(labelsize=10)
+    for lbl in cb.ax.get_yticklabels():
+        lbl.set_fontfamily("cambria")
 
-   # fig.suptitle(title, fontsize=14)
-    
+
+    OUT_FIG_DIR = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/manuscript_prep/MANU_v5_update/V6_figs/"
+
     if OLD_TAGS_VERSION:
         out = os.path.join(OUT_FIG_DIR, f"Mean_APA_4panel_OldTAGS_map_{metric_col}.png")
     else:
-        out = os.path.join(OUT_FIG_DIR, f"Mean_APA_4panel_map_{metric_col}.png")
+        out = os.path.join(OUT_FIG_DIR, f"Mean_APA_4panel_map_{metric_col}_{DATE_PREFIX}_.png")
         
 
     if save_file:
@@ -568,36 +515,24 @@ def plot_4panel_map(metric_col, title, cbar_label, cmap="viridis", vmin=None, vm
         print("Saved:", out)
     plt.show()
 
-
-# =========================
-# 3) Maps: mean, variance, seasonality
-# =========================
-
-# Mean APA during extreme drought state
+###  MAP ###
 plot_4panel_map(
     metric_col="mean_APA_dry",
     title="Mean precipitation accumulation during extreme drought state (NEP < 0.02)",
     cbar_label="Mean APA during dry state (mm w.e.)",
-    cmap="BrBG", vmin=0, vmax=1000, save_file=False, dpi=400,
+    cmap=seq_cmap, vmin=0, vmax=1000, save_file=True, dpi=400,
 )
 
-#######################################################################
-####################   HEAT MAPS   #############
-#######################################################################
-
-BASINS_ORDER = [16, 25, 17, 26, 15,                            # AP  
-                14, 20, 1, 9, 24, 2, 18, 19,                                               # 1, 24, 2, 9,  14, 20, 18, 19,                   #WA 
-                13, 21, 7, 11, 22, 6, 12, 23, 5, 4, 10, 3, 8] 
-
+#### HEATMAPS #####
+####################
 
 df_stats = pd.read_csv(os.path.join(OUT_STATS_DIR, "ALL_BASINS_dry_climatology_extreme_NEPlt002.csv"))
 df_stats.head()
 
-
 # =========================
 # 4) Heatmaps: basin × duration
 # =========================
-def plot_heatmap(value_col, title, cbar_label, vmin=None, vmax=None, cmap="viridis"):
+def plot_heatmap(value_col, title, cbar_label, vmin=None, vmax=None, cmap=seq_cmap):
     
     pivot = (
         df_stats.pivot(index="basin_id", columns="duration", values=value_col)
@@ -612,10 +547,10 @@ def plot_heatmap(value_col, title, cbar_label, vmin=None, vmax=None, cmap="virid
 
     # Y-ticks for basin IDs
     ax.set_yticks(np.arange(pivot.shape[0]))
-    ax.set_yticklabels(pivot.index.values)
+    ax.set_yticklabels(pivot.index.values, family="cambria")
 
     ax.set_xticks(np.arange(pivot.shape[1]))
-    ax.set_xticklabels(pivot.columns.values)
+    ax.set_xticklabels(pivot.columns.values, family="cambria")
 
     # ---- Secondary axis for region boundaries + labels ----
     ax2 = ax.twinx()
@@ -623,7 +558,8 @@ def plot_heatmap(value_col, title, cbar_label, vmin=None, vmax=None, cmap="virid
 
     region_sizes = REGION_SIZES
     region_names = REGION_NAMES
-    REGION_COLORS  = {"AP": "#4477AA", "WA": "#EE6677", "EA": "#228833"}
+    #REGION_COLORS  = {"AP": "#4477AA", "WA": "#EE6677", "EA": "#228833"}
+    REGION_COLORS  = {"AP": "#0A0A0A", "WA": "#080808", "EA": "#080808"}
     region_colors = REGION_COLORS
 
     # boundaries between regions (offset by 0.5 between rows)
@@ -650,23 +586,29 @@ def plot_heatmap(value_col, title, cbar_label, vmin=None, vmax=None, cmap="virid
             3.52, center, name,
             transform=ax2.transData,
             va='center', ha='left', fontsize=10, #fontweight='bold',
-            color = colors, alpha = 0.9, fontweight="bold",
+            color = colors, alpha = 0.9, fontweight="bold", family="cambria",
         )
 
-    ax.set_xlabel("Duration")
-    ax.set_ylabel("Basin ID")
-   
-    out = os.path.join(OUT_FIG_DIR, f"HEATMAP_{value_col}.png") 
-    #out = os.path.join(OUT_FIG_DIR, f"03Results_HEATMAP_{value_col}.png") 
+    ax.set_xlabel("Duration", family="cambria")
+    ax.set_ylabel("Basin ID", family="cambria")
+
+
+    OUT_FIG_DIR = "/Users/ucnworgu/OneDrive - University of Tasmania/mywork/PhD.things/manuscript_prep/MANU_v5_update/V6_figs/"
+
+    out = os.path.join(OUT_FIG_DIR, f"HEATMAP_{value_col}_{DATE_PREFIX}_.png") 
     plt.savefig(out, dpi=400, bbox_inches="tight")
 
     plt.show()
+
+
+print(OUT_FIG_DIR)
 
 
 plot_heatmap(
     "mean_APA_dry",
     "Mean APA during extreme drought state (NEP < 0.02)",
     "Mean APA during dry state (mm w.e.)",
-    vmin = 0, vmax = 1000, cmap = "BrBG",
+    vmin = 0, vmax = 1000, cmap = seq_cmap,
 )
+
 
