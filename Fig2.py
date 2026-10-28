@@ -25,12 +25,12 @@ DATE_PREFIX = date.today().strftime("%Y%m%d")
 # ---------------------
 
 
-#MAR_DATA_DIR = "/home/nworguu/DATA/auf_data/MAR.data/"
-CST_PATH      = os.path.join(MAR_DATA_DIR, "MARcst-AN35km-176x148.cdf2")
+MAR_DATA_DIR = #from zenodo see config.py
+CST_PATH      = "./MARcst-AN35km-176x148.cdf2"
 
 
 
-APA_TRIM_DIR      = os.path.join(ROOT_DIR, "PhD.things/project.main/results/multi.temporal.drought/rignot.individual.mask.results/3years/yearly_tables_12regions/")
+APA_TRIM_DIR      = #"/timeseries dri, files uploaded to zenodo"
 
 OUT_D = "/output path/"
 print(OUT_D)
