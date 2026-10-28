@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+title: "Code for: Temporal dynamics and evolution of Antarctic dry extremes using Multi-temporal Rarity Curves"
+type: software
+authors:
+  - family-names: Nworgu
+    given-names: Uzoma C.
+    orcid: "https://orcid.org/0009-0007-6536-5480"
+    affiliation: "Institut des Géosciences de l'Environnement (IGE), Université Grenoble Alpes, Grenoble, France; Institute for Marine and Antarctic Studies (IMAS), University of Tasmania, Hobart, Australia"
+version: 1.0.0
+license: MIT
+repository-code: "https://github.com/yuzee-333/phd_antarctic_dry_extremes"
+abstract: >-
+  Python scripts that produce the figures for a study applying the
+  Multi-temporal Rarity Curve (MRC) framework to MAR v3.12 daily
+  precipitation over Antarctic drainage basins, 1979–2023, to classify
+  and characterise dry extremes.
+keywords:
+  - Antarctica
+  - precipitation
+  - drought
+  - dry extremes
+  - MAR
+  - Multi-temporal Rarity Curves
